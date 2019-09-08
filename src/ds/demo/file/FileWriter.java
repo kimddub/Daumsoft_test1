@@ -11,7 +11,7 @@ import ds.demo.dto.DocData;
 public abstract class FileWriter {
 	public String formatType;
 	
-	public abstract void testPutAllData(List<DocData> testData, String fileName);
+	public abstract void putAllData(List<DocData> testData, String fileName);
 	
 	protected void writeDB(List<String> dataLines, String fileName) throws IOException {
 

@@ -17,7 +17,7 @@ import ds.demo.dto.DocData;
 public class JsonFileWriter extends FileWriter{
 	private String formatType = "\t";
 
-	public void testPutAllData(List<DocData> testData, String fileName) {
+	public void putAllData(List<DocData> testData, String fileName) {
 		
 		int size = testData.get(0).getSize();
 

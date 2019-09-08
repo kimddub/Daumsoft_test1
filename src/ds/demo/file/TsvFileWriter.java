@@ -9,7 +9,7 @@ import ds.demo.dto.DocData;
 public class TsvFileWriter extends FileWriter{
 	private String formatType = "\t";
 
-	public void testPutAllData(List<DocData> testData, String fileName) {
+	public void putAllData(List<DocData> testData, String fileName) {
 		
 		List<String> dataLines = new ArrayList<>(); //출력용 데이터 리스트
 		String tsvData = ""; // DocData를 출력용 문자열로 변경

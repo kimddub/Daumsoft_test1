@@ -12,7 +12,7 @@ import ds.demo.dto.DocData;
 public class TagFileWriter extends FileWriter {
 	private String formatType = "\n";
 
-	public void testPutAllData(List<DocData> testData, String fileName) {
+	public void putAllData(List<DocData> testData, String fileName) {
 		
 		List<String> dataLines = new ArrayList<>(); //출력용 데이터 리스트
 		String taggedData = ""; // DocData를 출력용 문자열로 변경

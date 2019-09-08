@@ -14,50 +14,7 @@ import ds.demo.dto.DocData;
 public class TagFileReader {
 	private static FileReader fr;
 
-	public static List<String[]> getAllData(String fileName){ 
-		
-		try {
-			fr = new FileReader(fileName);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		
-		BufferedReader br = new BufferedReader(fr);
-		List<String[]> dataLines = new ArrayList<>();
-		String dataLine = null;
-		String DOC_SEQ = "", TITLE = "", REG_DT ="";
-		int idx = 0;
-
-		try {
-			
-			while ( (dataLine = br.readLine()) != null) {   
-				
-				if (dataLine.contains("^[START]")) {
-					DOC_SEQ = "";
-					TITLE = "";
-					REG_DT ="";
-					
-					continue;
-				} else if (dataLine.contains("[DOC_SEQ]")) {
-					DOC_SEQ = br.readLine();
-				} else if (dataLine.contains("[TITLE]")) {
-					TITLE = br.readLine();
-				} else if (dataLine.contains("[REG_DT]")) {
-					REG_DT = br.readLine();
-				} else if (dataLine.contains("^[END]")) {
-				    dataLines.add(new String[] {DOC_SEQ, TITLE, REG_DT});
-				} 
-
-			}
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	   
-	   return dataLines;
-   } 
-	
-	public static List<DocData> testGetAllData(String fileName){ 
+	public static List<DocData> getAllData(String fileName){ 
 		
 		try {
 			fr = new FileReader(fileName);

@@ -14,19 +14,7 @@ import ds.demo.dto.DocData;
  
 // tsv파일 파싱 및 DB 입력 클래스
 public class TsvFileReader { 
-	
-	public static List<String[]> getAllData(String fileName) throws SQLException{ 
-		
-	   TsvParserSettings settings = new TsvParserSettings(); 
-	   settings.getFormat().setLineSeparator("\n"); 
-	   
-	   TsvParser parser = new TsvParser(settings); 
-	   
-	   List<String[]> allData = parser.parseAll(new File(fileName)); 
-	   return allData;
-   } 
-
-	public static List<DocData> testGetAllData(String fileName) throws SQLException{ 
+	public static List<DocData> getAllData(String fileName) throws SQLException{ 
 		
 		   TsvParserSettings settings = new TsvParserSettings(); 
 		   settings.getFormat().setLineSeparator("\n"); 
