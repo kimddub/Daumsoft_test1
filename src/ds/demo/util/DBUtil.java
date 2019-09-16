@@ -93,28 +93,28 @@ public class DBUtil {
 			
 		}
 		
-		public void prepareValue(int val_1,String val_2,String val_3){
-			try {
-				pstmt.setInt(1, val_1);
-				pstmt.setString(2, val_2);
-				pstmt.setString(3, val_3);
-				
-				pstmt.addBatch();
-				pstmt.clearParameters() ;
-								
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-			
-		}
+//		public void prepareValue(int val_1,String val_2,String val_3){
+//			try {
+//				pstmt.setInt(1, val_1);
+//				pstmt.setString(2, val_2);
+//				pstmt.setString(3, val_3);
+//				
+//				pstmt.addBatch();
+//				pstmt.clearParameters() ;
+//								
+//			} catch (SQLException e) {
+//				e.printStackTrace();
+//			}
+//			
+//		}
 		
-		public void testPrepareValue(Object[] values){
+		public void prepareValue(String[] values){
 			try {
-				
+				// (수동) 정수 자료형 처리 
 				int idx = 1;
 				pstmt.setInt(idx++,Integer.parseInt((String)values[0]));
 
-				for (int i=1; i<values.length; i++) {
+				for (int i=1; i<DocData.getSize(); i++) {
 					pstmt.setString(idx++,(String)(values[i]));
 				}
 				
@@ -132,15 +132,12 @@ public class DBUtil {
 			
 			double startTime = 0;
 			double endTime = 0;
-			
 			try {
 				startTime = System.nanoTime();
-				
 				pstmt.executeBatch();
-				con.commit();
-				
 				endTime = System.nanoTime();   // 프로그램 끝나는 시점 계산
-			    
+				
+				con.commit();
 				pstmt.clearBatch();
 		 		 
 			} catch (SQLException e) {

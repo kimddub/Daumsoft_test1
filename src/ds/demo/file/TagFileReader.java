@@ -1,20 +1,186 @@
 package ds.demo.file;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ds.demo.dto.DocData;
+import ds.demo.util.DocData;
 
 public class TagFileReader {
 	private static FileReader fr;
+	private static BufferedReader br;
+	private static List<String[]> allData = new ArrayList<>();
 
-	public static List<DocData> getAllData(String fileName){ 
+	public static List<String[]> readAllData(String fileName){ 
+		
+		parseData(fileName);
+		
+		try {
+			String[] data = null;
+			boolean isExtraValue = false;
+			int colIndexWithExtraValue = -1;
+			String dataLine = null;
+			
+			while ( (dataLine = br.readLine()) != null) {   
+				dataLine.trim();
+				
+				if (dataLine.contains("^[START]")) {
+
+					data = new String[DocData.getSize()];
+					isExtraValue = false;
+					colIndexWithExtraValue = -1;
+					
+					continue;
+					
+				} else if (dataLine.contains("^[END]")) {
+					
+					allData.add(data);
+					
+					isExtraValue = false;
+					colIndexWithExtraValue = -1;
+					
+					continue;
+					
+				} else if (dataLine.substring(0,1).equals("[") && dataLine.substring( dataLine.length() - 1, dataLine.length()).equals("]")) { 
+					
+					// 컬럼명 라인임을 확신하는 부분
+					for (int i=0; i<DocData.getSize(); i++) {
+						
+						if (dataLine.equals("["+ DocData.getColNames()[i] +"]")) {
+							data[i] = br.readLine();
+							
+							isExtraValue = true;
+							colIndexWithExtraValue = i;
+							break;
+							
+						}
+					}
+					
+					continue;
+					
+				} else if (isExtraValue && colIndexWithExtraValue != -1) { 
+					
+					// 컬럼값들 처리, 몇 번째 컬럼인지 정해진 상태
+					data[colIndexWithExtraValue] += "\r\n" + dataLine;
+										
+				}
+			}
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	   
+	   return allData;
+	}
+	/*
+	public static List<Map<String,Object>> readAllData(String fileName){ 
+		
+		parseData(fileName);
+		
+		
+		try {
+			Map<String,Object> data = null;
+			boolean isExtraValue = false;
+			String colNameWithExtraValue = "";
+			String dataLine = null;
+			
+			while ( (dataLine = br.readLine()) != null) {   
+				dataLine.trim();
+				
+				if (dataLine.contains("^[START]")) {
+
+					data = new HashMap<String,Object>();
+					isExtraValue = false;
+					colNameWithExtraValue = "";
+					
+					continue;
+					
+				} else if (dataLine.contains("^[END]")) {
+					
+					allData.add(data);
+					isExtraValue = false;
+					colNameWithExtraValue = "";
+					
+					continue;
+					
+				} else if (dataLine.substring(0,1).equals("[") && dataLine.substring( dataLine.length() - 1, dataLine.length()).equals("]")) { 
+					
+					// 컬럼명 라인임을 확신하는 부분
+					for (String colName:DocData.getColNames()) {
+						
+						if (dataLine.equals("["+ colName +"]")) {
+							
+							data.put(colName, br.readLine());
+							
+							isExtraValue = true;
+							colNameWithExtraValue = colName;
+							break;
+						}
+					}
+					
+					continue;
+					
+				} else if (isExtraValue && colNameWithExtraValue != "") { 
+					
+					// 컬럼값들 처리, 몇 번째 컬럼인지 정해진 상태
+					data.put(colNameWithExtraValue, data.get(colNameWithExtraValue) + "\r\n" + dataLine);
+					
+				}
+			}
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	   
+	   return allData;
+	}
+	*/
+	
+	// 문서 전체 파싱
+	private static void parseData(String path) {
+		// 이전 데이터 지우기
+		emptyParsedData();
+
+		try {
+			fr = new FileReader(path);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		
+		br = new BufferedReader(fr);
+		
+		System.out.println("Parsing the [" +path + "] ");
+		
+		// 데이터 포맷 셋팅
+		setDocDataFormat();
+	}
+	
+	private static void emptyParsedData() {
+		
+		allData.clear();
+		
+	}
+	
+	private static void setDocDataFormat() {
+		
+		DocData.setColNames(new String[] {"DOC_SEQ","TITLE","REG_DT"});
+		
+	}
+			
+			
+	
+	/*
+	public static List<DocData> readAllData(String fileName){ 
 		
 		try {
 			fr = new FileReader(fileName);
@@ -112,5 +278,6 @@ public class TagFileReader {
 		}
 	   
 	   return allData;
-   } 
+   }
+*/
 }

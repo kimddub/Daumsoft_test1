@@ -4,21 +4,48 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
 
-import ds.demo.dto.DocData;
+import ds.demo.util.DocData;
 
 public class JsonFileWriter extends FileWriter{
-	private String formatType = "\t";
 
-	public void putAllData(List<DocData> testData, String fileName) {
+	public void printAllData(List<Map<String,Object>> allData, String fileName) {
 		
+		for (Map<String,Object> data : allData) {
+
+			JsonObject obj = new JsonObject();
+			
+			for (String colName:DocData.getColNames()) {
+				
+				if (data.get(colName) instanceof Integer) {
+
+					obj.addProperty(colName, (Number)data.get(colName));
+				} else {
+
+					obj.addProperty(colName, (String)data.get(colName));
+				}
+
+			}
+			
+			dataLines.add(obj.toString());
+		}
+
+		try {
+
+			writeDB(dataLines, fileName);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		/*
 		int size = testData.get(0).getSize();
 
 		JsonArray Json = new JsonArray();
@@ -57,6 +84,6 @@ public class JsonFileWriter extends FileWriter{
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-		
+		*/
 	}
 }

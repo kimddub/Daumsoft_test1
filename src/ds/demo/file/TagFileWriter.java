@@ -1,19 +1,41 @@
 package ds.demo.file;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import ds.demo.dto.DocData;
+import ds.demo.util.DocData;
 
 public class TagFileWriter extends FileWriter {
 	private String formatType = "\n";
 
-	public void putAllData(List<DocData> testData, String fileName) {
+	public void printAllData(List<Map<String,Object>> allData, String fileName) {
+		printData = "";
 		
+		for (Map<String,Object> data : allData) {
+			printData = "^[START]" + formatType;
+			
+			for (String colName:DocData.getColNames()) {
+				
+				printData += "[" + colName + "]" + formatType;
+				printData += data.get(colName) + formatType;
+			}
+			
+			printData += "^[END]";
+			
+			dataLines.add(printData);
+		}
+		
+		try {
+
+			writeDB(dataLines, fileName);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		/*
 		List<String> dataLines = new ArrayList<>(); //출력용 데이터 리스트
 		String taggedData = ""; // DocData를 출력용 문자열로 변경
 		
@@ -46,7 +68,7 @@ public class TagFileWriter extends FileWriter {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+		*/
 	}
 	
 

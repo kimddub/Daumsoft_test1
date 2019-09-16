@@ -1,31 +1,22 @@
 package ds.demo.dao;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Map;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
-import ds.demo.dto.DocData;
 import ds.demo.util.DBUtil;
 import ds.demo.util.DBUtil.DBLink;
+import ds.demo.util.DocData;
 
 // DB 관리
 public class DocDao {
 	private String sql;
 	private ResultSet rs;
 	private ResultSetMetaData rsMd;
-	private List<String> dataLines;
 	private DBLink dbLink;
 
 	// JDBC 관련 객체 불어옴()
@@ -37,35 +28,76 @@ public class DocDao {
 	private void closeJDBC() {
 		dbLink.close();
 	}
-
-	// 테이블의 총 데이터 수
 	
-	public void countData(String table) {
-
-		callJDBC();
-
-		sql = "SELECT COUNT(*)\r\n FROM " + table + ";";
-		long dataSize = (Long) dbLink.getRow(sql);
-
-		System.out.println("Number of tabe " + table + "'s data : " + (int) dataSize);
-
-		closeJDBC();
-	}
-	
-	// DB 읽어들임 (order = 0:오름차순, 이상:나머지)
-	public List<DocData> readData(String table, int order) {
-		callJDBC();
+	private void setSelectQuery(String table, int order) {
 		
-		List<DocData> allData = new ArrayList<>();
-
 		if (order > 0) {
 			sql = "SELECT *\r\n" + "FROM " + table + "\r\n" + "ORDER BY `DOC_SEQ` DESC;";
 		} else {
 			sql = "SELECT *\r\n" + "FROM " + table + "\r\n;";
 		}
+	}
+	
+	private void setInsertQuery(String table) {
+		// 쿼리문 셋팅 - 파일 파싱 할 때의 컬럼명 순서로 저장된 배열이므로 순서에 맞음
+		String colNameArr = DocData.getColNames()[0];
+		
+		for (int i=1; i<DocData.getSize(); i++) {
+			colNameArr += ",`" + DocData.getColNames()[i] + "`";
+		}
+
+		String valArr = "?";
+		
+		for (int i=1; i<DocData.getSize(); i++) {
+			valArr += ", ?";
+		}
+		
+		sql = "INSERT INTO `" + table + "`(" + colNameArr + ") VALUES (" + valArr + ");";
+		dbLink.prepareSql(sql);
+	}
+	
+	// DB 읽어들임 (order = 0:오름차순, 이상:나머지)
+	public List<Map<String,Object>> getAllData(String table, int order) {
+		callJDBC();
+		
+		List<Map<String,Object>> allData = new ArrayList<>();
+
+		setSelectQuery(table,order);
 
 		rs = dbLink.getRows(sql);
 		rsMd = dbLink.getMetaData();
+		
+		String[] colNames = null;
+		Map<String,Object> values = null;
+		
+		try {
+			DocData.setSize(rsMd.getColumnCount());
+			colNames = new String[DocData.getSize()];
+
+			for (int i=0; i<DocData.getSize(); i++) {
+				colNames[i] = rsMd.getColumnName(i+1);
+			}
+
+			DocData.setColNames(colNames);
+			
+			while(rs.next()) {
+				values = new HashMap<>();
+				
+				for (int i=0; i<DocData.getSize(); i++) {
+					
+					values.put(colNames[i],rs.getObject(colNames[i]));
+				}
+				
+				allData.add(values);
+			}
+			
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		
+		/*
 		int colCnt;
 				
 		try {
@@ -90,20 +122,71 @@ public class DocDao {
 				
 				dataArr.add(colValues);
 				
-				allData.add(new DocData(rsMd.getColumnCount(), colNames, dataArr.get(dataIdx++)));
+				//allData.add(new DocData(rsMd.getColumnCount(), colNames, dataArr.get(dataIdx++)));
 			}
 			
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		*/
 		
+
+		System.out.println("Completed to read all Data (size : " + allData.size() +")");
 		
 		return allData;
 	}
 
-	private void trucate(String table) {
+	public void putAllData(List<String[]> allData, String table) throws SQLException {
+		// (수동) DB Table 셋팅
+		
+		// JDBC 시작
 		callJDBC();
 
+		// 해당 테이블 TRUNCATE
+		trucateTable(table);
+		
+		// 쿼리문 셋팅
+		setInsertQuery(table);
+		
+		// 데이터 처리 상황 출력
+		double totalElapsedTime = 0;
+		System.out.print("Inserting Data ");
+		
+		// ===데이터 INSERT===
+		int total = allData.size();
+		int batchSize = 10000;
+		int batchTerm = ((total - 1) / batchSize);
+
+		for (int i = 0; i < batchTerm; i++) {
+			for (int j = i * batchSize; j < (i + 1) * batchSize; j++) {
+				
+				dbLink.prepareValue(allData.get(j));
+			}
+			totalElapsedTime += dbLink.executeBatch();
+		}
+
+		for (int j = batchTerm * batchSize; j < total; j++) {
+			
+			dbLink.prepareValue(allData.get(j));
+		}
+		totalElapsedTime += dbLink.executeBatch();
+		
+		// 처리 결과 출력
+		System.out.println("Completed insert data : " + total);
+		System.out.println("Checked inserted DB data : " + countData(table) + "(missed data : " + 
+				(total == countData(table) ? "0" : total - countData(table))
+				+ ")");
+
+		System.out.println("Average Time to insert " + batchSize + " Data : " + Math.round(totalElapsedTime / batchTerm * 1000.0) / 1000.0 + ""
+						+ "s ");
+		
+		// JDBC 끝
+		dbLink.close();
+
+	}
+	
+	private void trucateTable(String table) {
+		
 		sql = "TRUNCATE TABLE " + table + ";";
 
 		try {
@@ -114,10 +197,21 @@ public class DocDao {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-
-		closeJDBC();
 	}
 	
+	// 테이블의 총 데이터 수
+	public int countData(String table) {
+		callJDBC();
+
+		sql = "SELECT COUNT(*)\r\n FROM " + table + ";";
+		long dataSize = (Long) dbLink.getRow(sql);
+
+		closeJDBC();
+		
+		return (int) dataSize;
+	}
+
+	/*
 	private void newSetTable(String table,DocData data) {
 		callJDBC();
 
@@ -151,81 +245,5 @@ public class DocDao {
 
 		closeJDBC();
 	}
-
-	public void insert(List<DocData> allData, String table) throws SQLException {
-
-		// 해당 테이블 TRUNCATE
-		DocData firstData = allData.get(0);
-		newSetTable(table,firstData);
-		// JDBC 셋팅
-		callJDBC();
-		
-		// 데이터 형식 셋팅
-		int dataSize = firstData.getSize();
-		Object[] colNames = firstData.getColNames();
-		
-		// 데이터 형식에 맞는 쿼리문 셋팅 시작
-		String colNameStr = "";
-		String valEntStr = "";
-		
-		int idx = 0;
-		for (Object colName : colNames ) {
-			if (idx++ != 0) {
-				colNameStr += ", ";
-			}
-			colNameStr += "`" + colName + "`";
-		}
-		
-		valEntStr += "?";
-		for (int i=1; i<dataSize; i++) {
-			valEntStr += ", ?";
-		}
-		
-		sql = "INSERT INTO `" + table + "`(" + colNameStr + ") VALUES (" + valEntStr + ");";
-		
-		dbLink.prepareSql(sql);
-		
-		// 데이터 형식에 맞는 쿼리문 셋팅 끝
-		
-		int DOC_SEQ = 0;
-		String TITLE = "";
-		String REG_DT = "";
-
-		int total = allData.size(); //
-		int cnt = 0;
-		int batchSize = 10000;
-		int batchTerm = ((total - 1) / batchSize);
-
-		double totalElapsedTime = 0;
-		System.out.print("Inserting Data ");
-		
-		for (int i = 0; i < batchTerm; i++) {
-			for (int j = i * batchSize; j < (i + 1) * batchSize; j++) {
-				
-				Object[] values = allData.get(j).getColValues();
-				dbLink.testPrepareValue(values);
-
-			}
-
-			totalElapsedTime += dbLink.executeBatch();
-		}
-
-		for (int j = batchTerm * batchSize; j < total; j++) {
-			Object[] values = allData.get(j).getColValues();
-			dbLink.testPrepareValue(values);
-
-		}
-
-		totalElapsedTime += dbLink.executeBatch();
-				
-		System.out.print("Completed processing " + total + " data / DB Check ");
-		countData(table);
-
-		System.out.println("Average Time to insert " + batchSize + " Data : " + Math.round(totalElapsedTime / batchTerm * 1000.0) / 1000.0 + ""
-						+ "s ");
-
-		dbLink.close();
-
-	}
-
+	*/
 }
